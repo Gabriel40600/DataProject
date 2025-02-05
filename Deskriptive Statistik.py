@@ -13,10 +13,10 @@ def analyze_linkedin_data(file_path, output_file):
     df_numeric = df[numeric_columns]
 
     # Generate descriptive statistics
-    descriptive_stats = df_numeric.describe()
+    descriptive_stats = df_numeric.describe().transpose()
 
-    # Save to Excel
-    descriptive_stats.to_excel(output_file, index=False)
+    # Save to Excel with flipped axis
+    descriptive_stats.to_excel(output_file, index=True)
     print(f"Processed data saved to {output_file}")
 
 
