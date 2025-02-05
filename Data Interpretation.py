@@ -124,8 +124,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     file_path = "processed_linkedin_data.xlsx"  # Path to the processed Excel file
-    sheet_name = "Technology & Innovation"
-
+    sheet_name = ("Sheet1")
     try:
         # Step 1: Load Excel data
         df = load_data(file_path, sheet_name)
