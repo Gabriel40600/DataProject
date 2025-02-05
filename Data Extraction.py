@@ -40,7 +40,7 @@ URL_PATTERN = re.compile(r'https?://\S+|www\.\S+', flags=re.IGNORECASE)
 
 
 # =============================================================================
-# CTA Extraction Function (Fixed)
+# CTA Extraction Function
 # =============================================================================
 def extract_cta(text: str) -> list:
     """Extracts CTA presence (1/0) and found CTA phrases separately."""
@@ -194,4 +194,4 @@ def process_linkedin_data(file_path: str, output_file: str):
 # Main Execution
 # =============================================================================
 if __name__ == "__main__":
-    process_linkedin_data("data_set.xlsx", "processed_linkedin_data.xlsx")
+    process_linkedin_data("data_set_cleaned.xlsx", "processed_linkedin_data.xlsx")
