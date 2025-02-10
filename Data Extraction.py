@@ -35,15 +35,43 @@ EMOJI_PATTERN = re.compile(
     "]+", flags=re.UNICODE
 )
 HASHTAG_PATTERN = re.compile(r"#\w+")
-QUOTE_PATTERN = re.compile(r'["“](.*?)["”]')
+QUOTE_PATTERN = re.compile(r'["]([^\"]+)["]')
 URL_PATTERN = re.compile(r'https?://\S+|www\.\S+', flags=re.IGNORECASE)
 
 
 # =============================================================================
-# CTA Extraction Function
+# Feature Extraction Functions
 # =============================================================================
+def contains_question(text: str) -> int:
+    return 1 if "?" in text else 0
+
+
+def extract_link(text: str) -> str:
+    match = URL_PATTERN.search(text)
+    return match.group(0) if match else ""
+
+
+def contains_link(text: str) -> int:
+    return 1 if URL_PATTERN.search(text) else 0
+
+
+def contains_quote(text: str) -> int:
+    return 1 if QUOTE_PATTERN.search(text) else 0
+
+
+def contains_hashtag(text: str) -> int:
+    return 1 if HASHTAG_PATTERN.search(text) else 0
+
+
+def contains_emoji(text: str) -> int:
+    return 1 if EMOJI_PATTERN.search(text) else 0
+
+
+def extract_emojis(text: str) -> str:
+    return ", ".join(EMOJI_PATTERN.findall(text))
+
+
 def extract_cta(text: str) -> list:
-    """Extracts CTA presence (1/0) and found CTA phrases separately."""
     cta_phrases = [
         "act now", "apply today", "be sure to", "book now", "buy now", "call today",
         "check out", "click here", "discover", "download now", "find out more",
@@ -51,147 +79,61 @@ def extract_cta(text: str) -> list:
         "register", "save big", "save money", "see more", "shop now", "sign up",
         "start now", "try it today", "visit our", "watch for"
     ]
-
     text_lower = text.lower()
     found_ctas = [phrase for phrase in cta_phrases if phrase in text_lower]
-
     return [1 if found_ctas else 0, ", ".join(found_ctas)]
 
 
-# =============================================================================
-# Feature Extraction Functions
-# =============================================================================
-def extract_emojis(text: str) -> list:
-    """Extracts all emojis from the text."""
-    return EMOJI_PATTERN.findall(text)
-
-
-def emoji_count(text: str) -> int:
-    """Counts the number of emojis in the text."""
-    return len(EMOJI_PATTERN.findall(text))
-
-
-def contains_emoji(text: str) -> bool:
-    """Returns True if at least one emoji is present in the text."""
-    return bool(EMOJI_PATTERN.search(text))
-
-
-def extract_hashtags(text: str) -> list:
-    """Extracts all hashtags and returns them as a list."""
-    return HASHTAG_PATTERN.findall(text)
-
-
-def contains_hashtag(text: str) -> bool:
-    """Checks if there is at least one hashtag in the text."""
-    return bool(HASHTAG_PATTERN.search(text))
-
-
-def extract_statistics(text: str) -> dict:
-    """Extracts numbers, percentages, and statistical terms from the text."""
-    percentages = re.findall(PERCENT_PATTERN, text)
-    numbers = re.findall(NUMBER_PATTERN, text)
-    stat_terms = re.findall(STAT_TERMS_PATTERN, text, flags=re.IGNORECASE)
-    return {"numbers": numbers, "percentages": percentages, "terms": stat_terms}
-
-
-def contains_question(text: str) -> bool:
-    return "?" in text
-
-
-def contains_link(text: str) -> bool:
-    return bool(URL_PATTERN.search(text))
-
-
-def contains_quote(text: str) -> bool:
-    return bool(QUOTE_PATTERN.search(text))
-
-
-def extract_personal_pronouns(text: str) -> list:
-    tokens = word_tokenize(text)
-    pos_tags = pos_tag(tokens)
-    return [word for word, tag in pos_tags if tag in {"PRP", "PRP$"}]
-
-
-def get_post_length(text: str) -> int:
-    """Returns the length of the post (number of characters)."""
-    return len(text)
-
-
 def extract_post_id(url: str) -> str:
-    """Extracts the LinkedIn post ID from the URL."""
     match = re.search(r"activity[-:]?(\d+)", url)
     return match.group(1) if match else None
 
 
 class LIPostTimestampExtractor:
-    """Extracts and formats a timestamp from a LinkedIn post URL."""
+    @staticmethod
+    def format_iso_timestamp(timestamp_s: float) -> str:
+        date = datetime.fromtimestamp(timestamp_s, tz=timezone.utc)
+        return date.strftime('%Y-%m-%d %H:%M:%S')
 
     @staticmethod
-    def format_timestamp(timestamp_s: float) -> str:
-        """Formats the timestamp (in seconds) to a human-readable date string."""
-        date = datetime.fromtimestamp(timestamp_s, tz=timezone.utc)
-        return date.strftime('%a, %d %b %Y %H:%M:%S GMT (UTC)')
+    def get_unix_timestamp(timestamp_s: float) -> int:
+        return int(timestamp_s)
 
     @classmethod
-    def get_date_from_linkedin_activity(cls, post_url: str) -> str:
-        """Extracts the timestamp from a LinkedIn activity URL."""
+    def get_date_from_linkedin_activity(cls, post_url: str) -> tuple:
         try:
             match = re.search(r'activity-(\d+)', post_url)
             if not match:
-                return 'Invalid LinkedIn ID'
+                return 'Invalid LinkedIn ID', None
             linkedin_id = match.group(1)
-
             first_41_bits = bin(int(linkedin_id))[2:43]
             timestamp_ms = int(first_41_bits, 2)
             timestamp_s = timestamp_ms / 1000
-            return cls.format_timestamp(timestamp_s)
+            return cls.format_iso_timestamp(timestamp_s), cls.get_unix_timestamp(timestamp_s)
         except (ValueError, IndexError):
-            return 'Date not available'
+            return 'Date not available', None
 
 
-# =============================================================================
-# Main Processing Function
-# =============================================================================
 def process_linkedin_data(file_path: str, output_file: str):
     df = pd.read_excel(file_path)
-
     analyzer = SentimentIntensityAnalyzer()
     df["Post content"] = df["Post content"].fillna("")
 
-    # CTA Extraction
-    cta_results = df["Post content"].apply(extract_cta).tolist()
-    df["CTA Present"] = [item[0] for item in cta_results]
-    df["CTA Found"] = [item[1] for item in cta_results]
-
-    # Sentiment Analysis
-    df["Sentiment_Positive"] = df["Post content"].apply(lambda x: analyzer.polarity_scores(x)["pos"])
-    df["Sentiment_Neutral"] = df["Post content"].apply(lambda x: analyzer.polarity_scores(x)["neu"])
-    df["Sentiment_Negative"] = df["Post content"].apply(lambda x: analyzer.polarity_scores(x)["neg"])
-    df["Sentiment_Compound"] = df["Post content"].apply(lambda x: analyzer.polarity_scores(x)["compound"])
-
-    # Feature Extraction
-    df["Post Length"] = df["Post content"].apply(get_post_length)
-    df["Hashtags"] = df["Post content"].apply(extract_hashtags)
+    df["CTA Present"], df["CTA Found"] = zip(*df["Post content"].apply(extract_cta))
     df["Contains Hashtag"] = df["Post content"].apply(contains_hashtag)
-    df["Emojis"] = df["Post content"].apply(extract_emojis)
-    df["Emoji Count"] = df["Post content"].apply(emoji_count)  # NEW COLUMN: Number of emojis
     df["Contains Emoji"] = df["Post content"].apply(contains_emoji)
+    df["Extracted Emojis"] = df["Post content"].apply(extract_emojis)
     df["Contains Question"] = df["Post content"].apply(contains_question)
     df["Contains Link"] = df["Post content"].apply(contains_link)
+    df["Extracted Link"] = df["Post content"].apply(extract_link)
     df["Contains Quote"] = df["Post content"].apply(contains_quote)
-    df["Personal Pronouns"] = df["Post content"].apply(extract_personal_pronouns)
-
-    # Extract Post ID & Timestamp
     df["Post ID"] = df["Post URL"].apply(extract_post_id)
-    df["Post Timestamp"] = df["Post URL"].apply(LIPostTimestampExtractor.get_date_from_linkedin_activity)
+    df[["Post Timestamp (ISO)", "Post Timestamp (Unix)"]] = df["Post URL"].apply(
+        lambda x: pd.Series(LIPostTimestampExtractor.get_date_from_linkedin_activity(x)))
 
-    # Save to Excel
     df.to_excel(output_file, index=False)
     print(f"Processed data saved to {output_file}")
 
 
-# =============================================================================
-# Main Execution
-# =============================================================================
 if __name__ == "__main__":
     process_linkedin_data("data_set_cleaned.xlsx", "processed_linkedin_data.xlsx")
