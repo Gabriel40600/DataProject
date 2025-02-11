@@ -17,6 +17,9 @@ nltk.download("stopwords", quiet=True)
 nltk.download("punkt", quiet=True)
 nltk.download("averaged_perceptron_tagger", quiet=True)
 
+# Initialize Sentiment Analyzer
+analyzer = SentimentIntensityAnalyzer()
+
 # =============================================================================
 # Precompiled Regex Patterns
 # =============================================================================
@@ -114,9 +117,20 @@ class LIPostTimestampExtractor:
             return 'Date not available', None
 
 
+# =============================================================================
+# Sentiment Analysis Function
+# =============================================================================
+def analyze_sentiment(text: str) -> tuple:
+    """Returns sentiment scores (positive, neutral, negative, and compound) for a given text."""
+    scores = analyzer.polarity_scores(text)
+    return scores["pos"], scores["neu"], scores["neg"], scores["compound"]
+
+
+# =============================================================================
+# Data Processing Function
+# =============================================================================
 def process_linkedin_data(file_path: str, output_file: str):
     df = pd.read_excel(file_path)
-    analyzer = SentimentIntensityAnalyzer()
     df["Post content"] = df["Post content"].fillna("")
 
     df["CTA Present"], df["CTA Found"] = zip(*df["Post content"].apply(extract_cta))
@@ -128,12 +142,22 @@ def process_linkedin_data(file_path: str, output_file: str):
     df["Extracted Link"] = df["Post content"].apply(extract_link)
     df["Contains Quote"] = df["Post content"].apply(contains_quote)
     df["Post ID"] = df["Post URL"].apply(extract_post_id)
+
     df[["Post Timestamp (ISO)", "Post Timestamp (Unix)"]] = df["Post URL"].apply(
-        lambda x: pd.Series(LIPostTimestampExtractor.get_date_from_linkedin_activity(x)))
+        lambda x: pd.Series(LIPostTimestampExtractor.get_date_from_linkedin_activity(x))
+    )
+
+    # Apply sentiment analysis
+    df["Positive Sentiment"], df["Neutral Sentiment"], df["Negative Sentiment"], df["Compound Sentiment"] = zip(
+        *df["Post content"].apply(analyze_sentiment)
+    )
 
     df.to_excel(output_file, index=False)
     print(f"Processed data saved to {output_file}")
 
 
+# =============================================================================
+# Run the Processing Function
+# =============================================================================
 if __name__ == "__main__":
     process_linkedin_data("data_set_cleaned.xlsx", "processed_linkedin_data.xlsx")
