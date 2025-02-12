@@ -4,7 +4,7 @@ import scipy.stats as stats
 import seaborn as sns
 
 # Define file path (update this based on your actual file location)
-file_path = "/2_processed_linkedin_data.xlsx"
+file_path = "2_processed_linkedin_data.xlsx"
 
 # Load the dataset
 df = pd.read_excel(file_path)
@@ -46,7 +46,7 @@ for col in interaction_cols:
     print(f"{col} - U-statistic: {u_stat:.3f}, p-value: {mw_p:.5f}")
 
 # Save results to an Excel file
-output_file = "/3b_cta_engagement_analysis.xlsx"
+output_file = "3b_cta_engagement_analysis.xlsx"
 
 with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
     cta_analysis.to_excel(writer, sheet_name="CTA Engagement", index=False)
@@ -64,7 +64,7 @@ plt.legend(title="Interaction Type")
 plt.grid(axis="y", linestyle="--", alpha=0.7)
 
 # Save the plot
-plot_file = "/3b_cta_engagement_plot.png"
+plot_file = "3b_cta_engagement_plot.png"
 plt.savefig(plot_file, bbox_inches="tight")
 
 # Show confirmation
