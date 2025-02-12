@@ -20,10 +20,6 @@ df["Hashtag Presence"] = df[hashtag_col].apply(lambda x: "With Hashtag" if x == 
 # Group by Hashtag Presence and calculate the average interactions
 interaction_summary = df.groupby("Hashtag Presence")[interaction_cols].mean().reset_index()
 
-# Save the results to an Excel file
-output_file = "3f_hashtag_analysis.xlsx"
-interaction_summary.to_excel(output_file, index=False)
-
 # Plot the interaction comparison
 fig, ax = plt.subplots(figsize=(8, 6))
 interaction_summary.set_index("Hashtag Presence").plot(kind="bar", ax=ax)
@@ -38,7 +34,7 @@ plt.grid(axis="y", linestyle="--", alpha=0.7)
 plot_file = "3f_hashtag_interaction_plot.png"
 plt.savefig(plot_file, bbox_inches="tight")
 
-# Perform Normality Test (Shapiro-Wilk)
+# ✅ Perform Normality Test (Shapiro-Wilk) and Statistical Tests
 print("Normality Test (Shapiro-Wilk):")
 normality_results = []
 test_results = []
@@ -79,13 +75,14 @@ for col in interaction_cols:
 # Convert to DataFrame
 percentage_change_df = pd.DataFrame(percentage_changes, columns=["Metric", "Percentage Change"])
 
-# Save results to an Excel file
+# ✅ Save all results to an Excel file
 output_file_tests = "3f_hashtag_tests.xlsx"
 
 with pd.ExcelWriter(output_file_tests, engine="xlsxwriter") as writer:
+    interaction_summary.to_excel(writer, sheet_name="Average Interactions", index=False)
     pd.DataFrame(normality_results, columns=["Metric", "Normality"]).to_excel(writer, sheet_name="Normality Test", index=False)
     pd.DataFrame(test_results, columns=["Metric", "Test", "Statistic", "p-value", "Significance"]).to_excel(writer, sheet_name="Statistical Tests", index=False)
     percentage_change_df.to_excel(writer, sheet_name="Percentage Change", index=False)
 
-# Show confirmation
+# ✅ Show confirmation
 print(f"Analysis completed! \nResults saved to: {output_file_tests}")

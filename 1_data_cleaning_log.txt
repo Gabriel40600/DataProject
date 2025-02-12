@@ -34,4 +34,4 @@ Column 'reactions' had 3 missing values replaced with 0.
 Column 'comments' had 56 missing values replaced with 0.
 Column 'shares' had 180 missing values replaced with 0.
 -------------------------------------
-2025-02-11 15:41:42,339 - INFO - Cleaned dataset and logs saved to /Users/gabrielbarrera/Documents/GitHub/DataProject/data_set_cleaned.xlsx and data_cleaning_log.txt
+2025-02-12 20:47:36,302 - INFO - Cleaned dataset and logs saved to /Users/gabrielbarrera/Documents/GitHub/DataProject/1_data_set_cleaned.xlsx and 1_data_cleaning_log.txt
